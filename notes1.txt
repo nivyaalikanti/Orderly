@@ -1,0 +1,46 @@
+Express - framework for node js
+- create server
+- create APIs
+- handle errors
+- manage requests and responses
+
+Mongoose
+- a library that helps Node js interact with MongoDB
+- connect to MongoDB
+- define schema
+- validate data
+- perform CRUD operations
+
+
+CORS (Cross-Origin Resource Sharing)
+- It is the middleware that allows communication btw diff servers
+- a browser security feature that allows a web server to explicitly permit cross-origin requests from domains other than its own.
+like frontend : port no - 3000
+     backend : port no - 4000
+
+
+
+PORT NO:  A port number is a 16-bit number used to identify network services on a device
+
+TWO SERVERS CANNOT RUN ON SAME PORT NUMBER 
+
+
+dotenv: used to load env variables from .env file
+
+body-parser: when frontend sends data to backend it comes inside the request body
+Body-parser is an Express.js middleware that parses incoming request bodies (JSON, URL-encoded, text, or raw data) before your handlers, converting them into readable JavaScript objects (req.body).
+
+
+middleware: function that runs btw request and responses
+
+
+routes: /food, /orders
+
+HTTP Methods:
+GET: fetch the data
+POST: send the data
+PUT: update the data
+DELETE: remove data
+
+
+

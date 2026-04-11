@@ -68,30 +68,7 @@ const foodSchema = new mongoose.Schema({
       },
     },
   ],
-  ///////////ai///////////////////////
-    aiDescription: {
-    type: String,
-    default: "",
-  },
-  aiTags: {
-    type: [String],
-    default: [],
-  },
-  aiAllergens: {
-    type: [String],
-    default: [],
-  },
-
-  aiServes: {
-  type: String,
-  default: ""
-  },
-
-  aiBestFor: {
-  type: [String],
-  default: []
-  },
-
+  
   createdAt: {
     type: Date,
     default: Date.now,

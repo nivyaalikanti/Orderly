@@ -1,13 +1,27 @@
+
+
 const express = require("express");
-const router = express.Router({mergeParams: true});
-const { getallMenus, getMenuById, createMenu, deleteMenu, addItemToMenu } = require("../controllers/menuController");
+const router = express.Router({ mergeParams: true });
+const {
+  getAllMenus,
+  createMenu,
+  deleteMenu,
+  addItemToMenu,
+} = require("../controllers/menuController");
+
 const { protect } = require("../controllers/authController");
-const { authorizeRoles } = require("../middleware/authorizeRoles");
+const { authorizeRoles } = require("../middlewares/authorizeRoles");
 
+router
+  .route("/")
+  .get(getAllMenus)
+  .post(protect, authorizeRoles("admin"), createMenu);
 
-router.route("/").get(getallMenus).post(protect, authorizeRoles("admin"), createMenu);
-router.route("/:menuId").get(getMenuById).delete(protect, authorizeRoles("admin"), deleteMenu);
-router.route("/:menuId/items").post(protect, authorizeRoles("admin"), addItemToMenu);
+// add food item to a specific menu (more specific, must come before /:menuId)
+router
+  .route("/:menuId/addItem")
+  .patch(protect, authorizeRoles("admin"), addItemToMenu);
 
+router.route("/:menuId").delete(protect, authorizeRoles("admin"), deleteMenu);
 
 module.exports = router;

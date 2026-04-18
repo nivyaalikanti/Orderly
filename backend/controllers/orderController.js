@@ -12,66 +12,90 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Create a new order   =>  /api/v1/order/new
 exports.newOrder = catchAsyncErrors(async (req, res, next) => {
-  // console.log("id", req.body);
   const { session_id } = req.body;
 
-  const session = await stripe.checkout.sessions.retrieve(session_id, {
-    expand: ["customer"],
-  });
-  console.log(session);
-  const cart = await Cart.findOne({ user: req.user._id })
-    .populate({
-      path: "items.foodItem",
-      select: "name price images",
-    })
-    .populate({
-      path: "restaurant",
-      select: "name",
+  try {
+    // Retrieve Stripe session
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ["customer"],
     });
-  console.log(cart);
 
-  let deliveryInfo = {
-    address:
-      session.shipping_details.address.line1 +
-      " " +
-      session.shipping_details.address.line1,
-    city: session.shipping_details.address.city,
-    phoneNo: session.customer_details.phone,
-    postalCode: session.shipping_details.address.postal_code,
-    country: session.shipping_details.address.country,
-  };
-  let orderItems = cart.items.map((item) => ({
-    name: item.foodItem.name,
-    quantity: item.quantity,
-    image: item.foodItem.images[0].url,
-    price: item.foodItem.price,
-    fooditem: item.foodItem._id,
-  }));
+    // Get cart
+    const cart = await Cart.findOne({ user: req.user._id })
+      .populate({
+        path: "items.foodItem",
+        select: "name price images",
+      })
+      .populate({
+        path: "restaurant",
+        select: "name",
+      });
 
-  let paymentInfo = {
-    id: session.payment_intent,
-    status: session.payment_status,
-  };
+    if (!cart || !cart.items || cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart is empty",
+      });
+    }
 
-  const order = await Order.create({
-    orderItems,
-    deliveryInfo,
-    paymentInfo,
-    deliveryCharge: +session.shipping_cost.amount_subtotal / 100,
-    itemsPrice: +session.amount_subtotal / 100,
-    finalTotal: +session.amount_total / 100,
-    user: req.user.id,
-    restaurant: cart.restaurant._id,
-    paidAt: Date.now(),
-  });
-  console.log(order);
+    // Build delivery info with fallbacks
+    let deliveryInfo = {
+      address: session.shipping_details?.address?.line1 || "N/A",
+      city: session.shipping_details?.address?.city || "N/A",
+      phoneNo: session.customer_details?.phone || "N/A",
+      postalCode: session.shipping_details?.address?.postal_code || "N/A",
+      country: session.shipping_details?.address?.country || "N/A",
+    };
 
-  await Cart.findOneAndDelete({ user: req.user._id });
+    // Build order items
+    let orderItems = cart.items.map((item) => ({
+      name: item.foodItem.name,
+      quantity: item.quantity,
+      image: item.foodItem.images?.[0]?.url || "/images/placeholder.png",
+      price: item.foodItem.price,
+      fooditem: item.foodItem._id,
+    }));
 
-  res.status(200).json({
-    success: true,
-    order,
-  });
+    // Build payment info
+    let paymentInfo = {
+      id: session.payment_intent,
+      status: session.payment_status,
+    };
+
+    // Calculate amounts from cart items (more reliable than Stripe)
+    const itemsPrice = cart.items.reduce((sum, item) => {
+      return sum + item.foodItem.price * item.quantity;
+    }, 0);
+    const deliveryCharge = 50; // Fixed delivery charge
+    const finalTotal = itemsPrice + deliveryCharge;
+
+    // Create order
+    const order = await Order.create({
+      orderItems,
+      deliveryInfo,
+      paymentInfo,
+      deliveryCharge,
+      itemsPrice,
+      finalTotal,
+      user: req.user._id,
+      restaurant: cart.restaurant._id,
+      paidAt: Date.now(),
+    });
+
+    // Delete cart after order is created
+    await Cart.findOneAndDelete({ user: req.user._id });
+
+    res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.error("Order creation error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create order",
+    });
+  }
 });
 
 // Get single order   =>   /api/v1/orders/:id
@@ -94,7 +118,7 @@ exports.getSingleOrder = catchAsyncErrors(async (req, res, next) => {
 // Get logged in user orders   =>   /api/v1/orders/me
 exports.myOrders = catchAsyncErrors(async (req, res, next) => {
   // Get the user ID from req.user
-  const userId = new ObjectId(req.user.id);
+  const userId = req.user._id;
   // Find orders for the specific user using the retrieved user ID
   const orders = await Order.find({ user: userId })
     .populate("user", "name email")

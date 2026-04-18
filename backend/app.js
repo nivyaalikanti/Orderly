@@ -8,8 +8,8 @@ const errorMiddleware = require("./middlewares/errors");
 
 // Middlewares
 app.use(cors());
-app.use(express.json({ limit: "30kb" }));
-app.use(express.urlencoded({ extended: true, limit: "30kb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
 app.use(fileUpload());
 
@@ -21,6 +21,7 @@ const order = require("./routes/order");
 const auth = require("./routes/auth");
 const payment = require("./routes/payment");
 const cart = require("./routes/cart");
+const aiRoutes = require("./routes/ai.routes");
 
 app.use("/api/v1/eats", foodRouter);
 app.use("/api/v1/eats/menus", menuRouter);
@@ -29,6 +30,7 @@ app.use("/api/v1/eats/orders", order);
 app.use("/api/v1/users", auth);
 app.use("/api/v1", payment);
 app.use("/api/v1/eats/cart", cart);
+app.use("/api/v1/ai", aiRoutes);
 
 // 404 handler
 app.all("*", (req, res) => {

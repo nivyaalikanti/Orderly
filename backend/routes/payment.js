@@ -3,12 +3,14 @@ const router = express.Router();
 const authController = require("../controllers/authController");
 
 const {
+  processPayment,
   newOrder,
   getSingleOrder,
   myOrders,
   allOrders,
 } = require("../controllers/paymentController");
 
+router.route("/eats/payment/process").post(authController.protect, processPayment);
 router.route("/payment/new").post(authController.protect, newOrder);
 router.route("/order/:id").get(authController.protect, getSingleOrder);
 router.route("/orders/me").get(authController.protect, myOrders);

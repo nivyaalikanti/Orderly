@@ -10,7 +10,64 @@ const dotenv = require("dotenv");
 dotenv.config({ path: "./config/config.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-// Create a new order   =>  /api/v1/order/new
+// Process Payment & Create Checkout Session   =>  /api/v1/eats/payment/process
+exports.processPayment = catchAsyncErrors(async (req, res, next) => {
+  const { items, restaurant } = req.body;
+
+  try {
+    // Validate items array
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart is empty",
+      });
+    }
+
+    // Create line items for Stripe
+    const lineItems = items.map((item) => {
+      const price = parseFloat(item.price) || 0;
+      const quantity = parseInt(item.quantity) || 1;
+      
+      return {
+        price_data: {
+          currency: "inr",
+          product_data: {
+            name: item.name || "Food Item",
+            images: item.image ? [item.image] : [],
+          },
+          unit_amount: Math.round(price * 100),
+        },
+        quantity: quantity,
+      };
+    });
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      success_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/cart`,
+      mode: "payment",
+      customer_email: req.user.email || "customer@example.com",
+      line_items: lineItems,
+      shipping_address_collection: {
+        allowed_countries: ["US", "CA", "IN", "GB"],
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      url: session.url,
+    });
+  } catch (error) {
+    console.error("Payment Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Payment processing failed",
+    });
+  }
+});
+
+// Create a new order   =>  /api/v1/payment/new
 exports.newOrder = catchAsyncErrors(async (req, res, next) => {
   // console.log("id", req.body);
   const { session_id } = req.body;

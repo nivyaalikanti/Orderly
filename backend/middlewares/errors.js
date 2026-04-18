@@ -1,21 +1,23 @@
 const ErrorHandler = require("../utils/errorHandler");
 
 module.exports = (err, req, res, next) => {
-  // if statusCode does not exist then 500 will be taken as error code ->internal server error
-  err.statusCode = err.statusCode || 500;
+  // Ensure statusCode is always a number
+  const statusCode = err.statusCode || err.status || 500;
+  const message = err.message || "Internal Server Error";
 
   if (process.env.NODE_ENV === "DEVELOPMENT") {
-    res.status(err.statusCode).json({
+    res.status(statusCode).json({
       success: false,
       error: err,
-      errMessage: err.message,
+      errMessage: message,
       stack: err.stack,
     });
   }
 
   if (process.env.NODE_ENV === "PRODUCTION") {
     let error = { ...err };
-    error.message = err.message;
+    error.statusCode = statusCode;
+    error.message = message;
 
     // Wrong Mongoose Object Id Error . if we type wrong product id in route we will get error.
     if (err.name == "castError") {

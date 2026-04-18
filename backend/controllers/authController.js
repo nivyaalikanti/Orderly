@@ -18,15 +18,15 @@ exports.signup = catchAsyncErrors(async (req, res, next) => {
   let avatar = {};
 
   // If avatar not provided OR default avatar
-  if (!req.body.avatar || req.body.avatar === "/images/images.png") {
+  if (!req.body.avatar || req.body.avatar === "/images/images.png" || req.body.avatar === "") {
 
     avatar = {
       public_id: "default",
       url: "/images/images.png",
     };
 
-  } else {
-
+  } else if (req.body.avatar && req.body.avatar.startsWith("data:image")) {
+    // Only upload to Cloudinary if it's a base64 image
     const result = await cloudinary.uploader.upload(req.body.avatar, {
       folder: "avatars",
       width: 150,
@@ -36,6 +36,12 @@ exports.signup = catchAsyncErrors(async (req, res, next) => {
     avatar = {
       public_id: result.public_id,
       url: result.secure_url,
+    };
+  } else {
+    // Default avatar if something unexpected is sent
+    avatar = {
+      public_id: "default",
+      url: "/images/images.png",
     };
   }
 

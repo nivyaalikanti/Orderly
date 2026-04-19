@@ -1,31 +1,30 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  getRestaurants
-
+  getRestaurants,
+  deleteRestaurant   
 } from "../redux/actions/restaurantAction";
 
 const Restaurant = ({ restaurant }) => {
   const dispatch = useDispatch();
 
-  // const { isAuthenticated, user } = useSelector(
-  //   (state) => state.auth || {}
-  // );
+  const { isAuthenticated, user } = useSelector(
+    (state) => state.user || {}
+  );
 
-  // const handleDelete = () => {
-  //   if (!window.confirm("Delete this restaurant?")) return;
+  const handleDelete = () => {
+    if (!window.confirm("Delete this restaurant?")) return;
 
-  //   dispatch(deleteRestaurant(restaurant._id))
-  //     .unwrap()
-  //     .then(() => {
-  //       // optional: refetch (not needed since we updated state already)
-  //       // dispatch(getRestaurants());
-  //     })
-  //     .catch((err) => {
-  //       alert(err || "Unable to delete");
-  //     });
-  // };
+    dispatch(deleteRestaurant(restaurant._id))
+      .unwrap()
+      .then(() => {
+        // No need to refetch — state already updated
+      })
+      .catch((err) => {
+        alert(err || "Unable to delete");
+      });
+  };
 
   return (
     <div className="col-sm-12 col-md-6 col-lg-3 my-3">
@@ -36,7 +35,7 @@ const Restaurant = ({ restaurant }) => {
         >
           <img
             className="card-img-top mx-auto"
-            src={restaurant.images[0].url}
+            src={restaurant.images?.[0]?.url}  //SAFE ACCESS
             alt={restaurant.name}
           />
         </Link>
@@ -58,14 +57,14 @@ const Restaurant = ({ restaurant }) => {
             </span>
           </div>
 
-          {/* {isAuthenticated && user?.role === "admin" && (
+          {isAuthenticated && user?.role === "admin" && (
             <button
               className="btn btn-danger btn-sm mt-2"
               onClick={handleDelete}
             >
               Delete
             </button>
-          )} */}
+          )}
         </div>
       </div>
     </div>

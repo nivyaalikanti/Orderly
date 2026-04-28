@@ -1,33 +1,79 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faIndianRupeeSign } from "@fortawesome/free-solid-svg-icons";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import {
+  addItemToCart,
+  updateCartQuantity,
+  removeItemFromCart,
+} from "../redux/actions/cartActions";
+import axios from "axios";
+import { getMenus } from "../redux/actions/menuActions";
 
-const Fooditem = ({ fooditem }) => {
+const Fooditem = ({ fooditem, restaurant }) => {
   const [quantity, setQuantity] = useState(1);
   const [showButtons, setShowButtons] = useState(false);
 
-  // Add button click
-  const addToCartHandler = () => {
-    setShowButtons(true);
-    setQuantity(1);
-  };
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  // Increase quantity
-  const increaseQty = () => {
-    if (quantity < fooditem.stock) {
-      setQuantity(quantity + 1);
+  //state (Redux Toolkit user slice)
+  const { user } = useSelector((state) => state.user);
+  const isAuthenticated = !!user;
+
+  //cart from slice
+  const { cartItems } = useSelector((state) => state.cart);
+
+  useEffect(() => {
+    const cartItem = cartItems.find(
+      (item) => item.foodItem._id === fooditem._id
+    );
+
+    if (cartItem) {
+      setQuantity(cartItem.quantity);
+      setShowButtons(true);
+    } else {
+      setQuantity(1);
+      setShowButtons(false);
     }
-  };
+  }, [cartItems, fooditem]);
 
-  // Decrease quantity
+  // ➖ decrease
   const decreaseQty = () => {
     if (quantity > 1) {
-      setQuantity(quantity - 1);
+      const newQuantity = quantity - 1;
+      setQuantity(newQuantity);
+
+      //params
+      dispatch(updateCartQuantity(fooditem._id, newQuantity));
     } else {
-      // if 0 → go back to Add button
+      setQuantity(0);
       setShowButtons(false);
-      setQuantity(1);
+      dispatch(removeItemFromCart(fooditem._id));
     }
+  };
+
+  // ➕ increase
+  const increaseQty = () => {
+    if (quantity < fooditem.stock) {
+      const newQuantity = quantity + 1;
+      setQuantity(newQuantity);
+
+      dispatch(updateCartQuantity(fooditem._id, newQuantity));
+    } else {
+      alert("Exceeded stock limit");
+    }
+  };
+
+  //add to cart
+  const addToCartHandler = () => {
+    if (!isAuthenticated) {
+      return navigate("/users/login");
+    }
+
+    dispatch(addItemToCart(fooditem._id, restaurant, quantity));
+    setShowButtons(true);
   };
 
   return (
@@ -49,47 +95,41 @@ const Fooditem = ({ fooditem }) => {
             {fooditem.price}
           </p>
 
-          {/*BUTTON LOGIC */}
           {!showButtons ? (
-            <button
-              type="button"
+          
+            (!isAuthenticated || user?.role !== "admin") && (
+              <button
               id="cart_btn"
-              className="btn btn-primary mt-2"
+              className="btn btn-primary ml-4"
               disabled={fooditem.stock === 0}
               onClick={addToCartHandler}
             >
               Add to Cart
             </button>
+            )
           ) : (
-            <div className="stockCounter d-flex align-items-center mt-2">
-              <button
-                className="btn btn-danger"
-                onClick={decreaseQty}
-              >
+            <div className="stockCounter d-inline">
+              <span className="btn btn-danger minus" onClick={decreaseQty}>
                 -
-              </button>
+              </span>
 
               <input
                 type="number"
-                className="form-control text-center mx-2"
+                className="form-control count d-inline"
                 value={quantity}
                 readOnly
-                style={{ width: "60px" }}
               />
 
-              <button
-                className="btn btn-primary"
-                onClick={increaseQty}
-              >
+              <span className="btn btn-primary plus" onClick={increaseQty}>
                 +
-              </button>
+              </span>
             </div>
           )}
 
           <hr />
 
           <p>
-            Status:{" "}
+            Status:
             <span
               className={
                 fooditem.stock > 0 ? "greenColor" : "redColor"
@@ -98,6 +138,33 @@ const Fooditem = ({ fooditem }) => {
               {fooditem.stock > 0 ? "In Stock" : "Out of Stock"}
             </span>
           </p>
+
+          {/* ADMIN DELETE */}
+          {isAuthenticated && user?.role === "admin" && (
+            <button
+              className="btn btn-danger btn-sm mt-2"
+              onClick={async () => {
+                if (!window.confirm("Delete this food item?")) return;
+
+                try {
+                  await axios.delete(`/api/v1/eats/item/${fooditem._id}`, {
+                    withCredentials: true,
+                  });
+
+                  if (restaurant) {
+                    dispatch(getMenus(restaurant));
+                  }
+                } catch (err) {
+                  console.error(err);
+                  alert(
+                    err.response?.data?.message || "Unable to delete item"
+                  );
+                }
+              }}
+            >
+              Delete
+            </button>
+          )} 
         </div>
       </div>
     </div>
